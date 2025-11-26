@@ -13,6 +13,7 @@ export default function Home() {
   const questionRefs = React.useRef<Record<number, HTMLDivElement | null>>({});
   const [mode, setMode] = useState<'edit' | 'answer'>('edit');
   const [answers, setAnswers] = useState<Record<number, number | null>>({});
+  const [submitted, setSubmitted] = useState(false); // New state to track if answers have been submitted
 
   function addQuestion() {
     setDraftQuestions((prev) => [
@@ -47,6 +48,7 @@ export default function Home() {
     setDraftQuestions(questions.map((q) => ({ ...q })));
     setSelectedQuizId(newQuiz.id);
     setMode('edit');
+    setSubmitted(false); // Reset submitted state
   }
 
   function updateQuestionText(id: number, text: string) {
@@ -91,6 +93,7 @@ export default function Home() {
       draftQuestions.forEach((q) => (initialAnswers[q.id] = null));
       setAnswers(initialAnswers);
       setMode('answer');
+      setSubmitted(false); // Reset submitted state
     } else {
       const newQuiz: Quiz = { id: Date.now(), title, questions: draftQuestions };
       setQuizzes((prev) => [newQuiz, ...prev]);
@@ -100,6 +103,7 @@ export default function Home() {
       setAnswers(initialAnswers);
       setSelectedQuizId(newQuiz.id);
       setMode('answer');
+      setSubmitted(false); // Reset submitted state
     }
   }
 
@@ -115,6 +119,18 @@ export default function Home() {
     setAnswers(initialAnswers);
     setSelectedQuizId(quizId);
     setMode('answer');
+    setSubmitted(false); // Reset submitted state when viewing a quiz
+  }
+
+  function deleteQuiz(quizId: number) {
+    if (!window.confirm("Are you sure you want to delete this quiz?")) return;
+    setQuizzes((prev) => prev.filter((q) => q.id !== quizId));
+    if (selectedQuizId === quizId) {
+      setSelectedQuizId(null);
+      setDraftQuestions([]);
+      setAnswers({});
+      setSubmitted(false);
+    }
   }
 
   function scrollToQuestion(id: number) {
@@ -169,14 +185,22 @@ export default function Home() {
               <p className="text-black">No quizzes yet.</p>
               ) : (
                 quizzes.map((quiz) => (
-                  <button
-                    key={quiz.id}
-                    onClick={() => viewQuiz(quiz.id)}
-                    className={`block w-full text-left px-3 py-2 mb-2 rounded shadow-lg ${
-                      selectedQuizId === quiz.id ? "text-black bg-yellow-300 font-semibold" : "text-yellow-300 bg-black"
-                    }`}>
-                    {quiz.title}
-                  </button>
+                  <div key={quiz.id} className="flex items-center mb-2">
+                    <button
+                      onClick={() => viewQuiz(quiz.id)}
+                      className={`flex-1 text-left px-3 py-2 rounded shadow-lg ${
+                        selectedQuizId === quiz.id ? "text-black bg-yellow-300 font-semibold" : "text-yellow-300 bg-black"
+                      }`}>
+                      {quiz.title}
+                    </button>
+                    <button
+                      onClick={() => deleteQuiz(quiz.id)}
+                      className="ml-2 text-red-500 hover:text-red-700 font-bold"
+                      aria-label="Delete quiz"
+                    >
+                      X
+                    </button>
+                  </div>
                 ))
               )}
           </div>
@@ -238,6 +262,7 @@ export default function Home() {
                               name={`q-${q.id}`}
                               checked={answers[q.id] === i}
                               onChange={() => setAnswers((prev) => ({ ...prev, [q.id]: i }))}
+                              disabled={submitted} // Disable after submission
                               className="accent-yellow-500"
                             />
                             <span className="text-sm text-amber-200">{c || <em className="text-amber-200">(no choice)</em>}</span>
@@ -280,9 +305,11 @@ export default function Home() {
                   });
                   const percent = total === 0 ? 0 : Math.round((correct / total) * 100);
                   alert(`Score: ${correct} / ${total} (${percent}%)`);
+                  setSubmitted(true); // Set submitted to true after submission
                 }}
+                disabled={submitted} // Disable submit button after submission
                 aria-label="Submit answers"
-                className="bg-yellow-300 text-black px-4 py-2 rounded shadow-lg font-semibold focus:outline-2 focus:outline-offset-2"
+                className="bg-yellow-300 text-black px-4 py-2 rounded shadow-lg font-semibold focus:outline-2 focus:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Submit Answers
               </button>
@@ -335,4 +362,5 @@ export default function Home() {
     </div>
   );
 }
+
 
